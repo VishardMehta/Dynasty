@@ -102,7 +102,7 @@ export default function KitPlanning() {
                                             <td>{kit.totalWeight}</td>
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                    <div style={{ width: 60, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)' }}>
+                                                    <div style={{ width: 60, height: 6, borderRadius: 3, background: '#E5E8ED' }}>
                                                         <div style={{
                                                             width: `${kit.utilization}%`, height: '100%', borderRadius: 3,
                                                             background: kit.utilization > 90 ? 'var(--accent-emerald)' : 'var(--accent-amber)',
@@ -124,7 +124,7 @@ export default function KitPlanning() {
                                             <tr key={kit.id + '-detail'}>
                                                 <td colSpan={7} style={{ padding: '0 16px 16px' }}>
                                                     <div style={{
-                                                        background: 'rgba(255,255,255,0.02)', borderRadius: 10,
+                                                        background: '#F8FAFC', borderRadius: 10,
                                                         padding: 16, border: '1px solid var(--border-subtle)',
                                                     }}>
                                                         <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 10 }}>Kit Contents</div>
@@ -179,12 +179,12 @@ export default function KitPlanning() {
                             options={{
                                 responsive: true, maintainAspectRatio: false,
                                 plugins: {
-                                    legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } },
+                                    legend: { labels: { color: '#5A6A7E', font: { family: 'Inter', size: 11 } } },
                                     tooltip: { backgroundColor: '#0B1F3B', titleColor: '#FFFFFF', bodyColor: '#C4CAD4', borderColor: 'rgba(46,134,255,0.2)', borderWidth: 1, cornerRadius: 8, padding: 12 },
                                 },
                                 scales: {
-                                    x: { stacked: true, ticks: { color: '#64748b', font: { size: 10 } }, grid: { display: false } },
-                                    y: { stacked: true, ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                                    x: { stacked: true, ticks: { color: '#5A6A7E', font: { size: 10 } }, grid: { display: false } },
+                                    y: { stacked: true, ticks: { color: '#5A6A7E', font: { size: 10 } }, grid: { color: '#E5E8ED' } },
                                 },
                             }}
                         />

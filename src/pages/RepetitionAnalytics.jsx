@@ -60,7 +60,7 @@ export default function RepetitionAnalytics() {
                                     <span style={{ color: 'var(--text-muted)' }}>Reuse Rate</span>
                                     <span style={{ fontWeight: 600, color: cluster.color }}>{cluster.reuseRate}%</span>
                                 </div>
-                                <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)' }}>
+                                <div style={{ height: 4, borderRadius: 2, background: '#E5E8ED' }}>
                                     <div style={{
                                         width: `${cluster.reuseRate}%`, height: '100%',
                                         borderRadius: 2, background: cluster.color,
@@ -103,8 +103,8 @@ export default function RepetitionAnalytics() {
                                         tooltip: { backgroundColor: '#0B1F3B', titleColor: '#FFFFFF', bodyColor: '#C4CAD4', borderColor: 'rgba(46,134,255,0.2)', borderWidth: 1, cornerRadius: 8, padding: 12 },
                                     },
                                     scales: {
-                                        x: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { display: false } },
-                                        y: { ticks: { color: '#64748b', font: { size: 10 }, callback: v => '$' + (v / 1000) + 'K' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                                        x: { ticks: { color: '#5A6A7E', font: { size: 9 } }, grid: { display: false } },
+                                        y: { ticks: { color: '#5A6A7E', font: { size: 10 }, callback: v => '$' + (v / 1000) + 'K' }, grid: { color: '#E5E8ED' } },
                                     },
                                 }}
                             />
@@ -169,7 +169,7 @@ export default function RepetitionAnalytics() {
                         {repetitionClusters.slice(0, 4).map((c) => (
                             <div key={c.id} style={{
                                 padding: '14px 16px', borderRadius: 10,
-                                background: 'rgba(255,255,255,0.02)',
+                                background: '#F8FAFC',
                                 border: '1px solid var(--border-subtle)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                 cursor: 'pointer', transition: 'all 0.2s ease',

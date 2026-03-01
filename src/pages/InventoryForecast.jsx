@@ -78,12 +78,12 @@ export default function InventoryForecast() {
                             options={{
                                 responsive: true, maintainAspectRatio: false,
                                 plugins: {
-                                    legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } },
+                                    legend: { labels: { color: '#5A6A7E', font: { family: 'Inter', size: 11 } } },
                                     tooltip: { backgroundColor: '#0B1F3B', titleColor: '#FFFFFF', bodyColor: '#C4CAD4', borderColor: 'rgba(46,134,255,0.2)', borderWidth: 1, cornerRadius: 8, padding: 12 },
                                 },
                                 scales: {
-                                    x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
-                                    y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                                    x: { ticks: { color: '#5A6A7E', font: { size: 10 } }, grid: { color: '#E5E8ED' } },
+                                    y: { ticks: { color: '#5A6A7E', font: { size: 10 } }, grid: { color: '#E5E8ED' } },
                                 },
                             }}
                         />
@@ -144,7 +144,7 @@ export default function InventoryForecast() {
                                             {item.current}/{item.required} {item.unit} ({item.percent}%)
                                         </span>
                                     </div>
-                                    <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)' }}>
+                                    <div style={{ height: 6, borderRadius: 3, background: '#E5E8ED' }}>
                                         <div style={{
                                             width: `${item.percent}%`, height: '100%', borderRadius: 3,
                                             background: item.percent >= 90 ? 'var(--accent-emerald)' :

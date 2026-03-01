@@ -107,7 +107,7 @@ export default function BIMUpload() {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                     <div style={{
                                                         width: 60, height: 6, borderRadius: 3,
-                                                        background: 'rgba(255,255,255,0.06)',
+                                                        background: '#F4F6F9',
                                                         overflow: 'hidden',
                                                     }}>
                                                         <div style={{

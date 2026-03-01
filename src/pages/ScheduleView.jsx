@@ -134,7 +134,7 @@ export default function ScheduleView() {
                                 <div key={item.kit} style={{
                                     display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr 80px',
                                     gap: 12, alignItems: 'center', padding: '10px 12px',
-                                    borderRadius: 8, background: 'rgba(255,255,255,0.02)',
+                                    borderRadius: 8, background: '#F8FAFC',
                                     border: '1px solid var(--border-subtle)', fontSize: '0.82rem',
                                 }}>
                                     <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>{item.kit}</span>

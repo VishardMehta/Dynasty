@@ -1,5 +1,5 @@
 // =============================================
-// CreaTech — Mock Data Module
+// Dynasty — Mock Data Module
 // All simulated AI/ML outputs for the prototype
 // =============================================
 

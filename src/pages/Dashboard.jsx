@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, PointElement,
     LineElement, BarElement, ArcElement, Filler, Tooltip, Legend
@@ -5,12 +6,13 @@ import {
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
     TrendingDown, DollarSign, Zap, Target, Recycle, Package,
-    ArrowUpRight, ArrowDownRight, Minus
+    ArrowUpRight, ArrowDownRight, Minus, MapPin, Calendar, Users, Building2
 } from 'lucide-react';
 import {
     kpiData, inventoryForecast, costBreakdown,
     materialDistribution, activityFeed, projectInfo
 } from '../data/mockData';
+import { useCountUp } from '../hooks/useAnimations';
 
 ChartJS.register(
     CategoryScale, LinearScale, PointElement, LineElement,
@@ -40,24 +42,66 @@ const chartDefaults = {
     },
 };
 
+function AnimatedKPI({ value }) {
+    const numericPart = parseFloat(value.replace(/[^0-9.]/g, ''));
+    const prefix = value.startsWith('$') ? '$' : '';
+    const suffix = value.includes('%') ? '%' : value.includes('×') ? '×' : value.includes('K') ? 'K' : '';
+    const animated = useCountUp(numericPart, 1200);
+
+    if (isNaN(numericPart)) return <div className="kpi-value">{value}</div>;
+
+    let display = animated;
+    if (suffix === 'K') display = Math.round(animated);
+    else if (suffix === '%' || suffix === '×') display = animated.toFixed(animated % 1 === 0 ? 0 : animated < 10 ? 2 : 1);
+    else display = Math.round(animated);
+
+    return <div className="kpi-value">{prefix}{display}{suffix}</div>;
+}
+
 export default function Dashboard() {
+    const [progressWidth, setProgressWidth] = useState(0);
     const trendIcon = (dir) => {
         if (dir === 'up') return <ArrowUpRight size={14} />;
         if (dir === 'down') return <ArrowDownRight size={14} />;
         return <Minus size={14} />;
     };
 
+    useEffect(() => {
+        const timer = setTimeout(() => setProgressWidth(projectInfo.completionPercent), 300);
+        return () => clearTimeout(timer);
+    }, []);
+
     return (
         <>
             <div className="page-header">
                 <div>
                     <h1>Dashboard</h1>
-                    <div className="subtitle">{projectInfo.name} — Floor {projectInfo.currentFloor} of {projectInfo.totalFloors}</div>
+                    <div className="subtitle">Project overview and key performance indicators</div>
                 </div>
                 <span className="badge info">{projectInfo.completionPercent}% Complete</span>
             </div>
 
             <div className="page-content">
+                {/* Project Overview Banner */}
+                <div className="project-overview animate-fade-in-up">
+                    <div className="project-overview-info">
+                        <div className="project-overview-title">{projectInfo.name}</div>
+                        <div className="project-overview-meta">
+                            <span><MapPin size={13} /> {projectInfo.location}</span>
+                            <span><Building2 size={13} /> {projectInfo.contractor}</span>
+                            <span><Calendar size={13} /> {projectInfo.startDate} → {projectInfo.estimatedEnd}</span>
+                            <span><Users size={13} /> Floor {projectInfo.currentFloor} of {projectInfo.totalFloors}</span>
+                        </div>
+                    </div>
+                    <div className="project-overview-progress">
+                        <div className="progress-bar-value">{projectInfo.completionPercent}%</div>
+                        <div className="progress-bar-container">
+                            <div className="progress-bar-fill" style={{ width: `${progressWidth}%` }} />
+                        </div>
+                        <div className="progress-bar-label">Overall Completion</div>
+                    </div>
+                </div>
+
                 {/* KPI Cards */}
                 <div className="kpi-grid">
                     {kpiData.map((kpi, i) => {
@@ -66,7 +110,7 @@ export default function Dashboard() {
                             <div key={i} className={`kpi-card ${kpi.color} animate-fade-in-up stagger-${i + 1}`}>
                                 <div className="kpi-icon"><Icon size={20} /></div>
                                 <div className="kpi-label">{kpi.label}</div>
-                                <div className="kpi-value">{kpi.value}</div>
+                                <AnimatedKPI value={kpi.value} />
                                 <div className={`kpi-trend ${kpi.direction}`}>
                                     {trendIcon(kpi.direction)} {kpi.trend}
                                 </div>
@@ -139,7 +183,7 @@ export default function Dashboard() {
                                     labels: materialDistribution.labels,
                                     datasets: [{
                                         data: materialDistribution.values,
-                                        backgroundColor: materialDistribution.colors,
+                                        backgroundColor: ['#2E86FF', '#1F3C88', '#00B894', '#F39C12', '#E74C3C', '#8896A6'],
                                         borderWidth: 0,
                                         hoverOffset: 6,
                                     }],

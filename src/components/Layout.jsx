@@ -4,6 +4,7 @@ import {
     LayoutDashboard, Upload, Repeat, Package, BarChart3,
     FileText, CalendarRange, ChevronLeft, ChevronRight, Crown
 } from 'lucide-react';
+import HeaderBar from './HeaderBar';
 
 const navItems = [
     { section: 'Overview' },
@@ -50,6 +51,10 @@ export default function Layout({ children }) {
                     })}
                 </nav>
 
+                <div className="sidebar-footer">
+                    <div className="sidebar-version">v1.0.0 — Prototype</div>
+                </div>
+
                 <div className="sidebar-toggle">
                     <button onClick={() => setCollapsed(!collapsed)} title={collapsed ? 'Expand' : 'Collapse'}>
                         {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
@@ -59,6 +64,7 @@ export default function Layout({ children }) {
 
             {/* Main */}
             <main className={`main-area ${collapsed ? 'collapsed' : ''}`}>
+                <HeaderBar />
                 {children}
             </main>
         </div>
