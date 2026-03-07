@@ -1,23 +1,51 @@
+import { useState } from 'react';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, PointElement,
     LineElement, Filler, Tooltip, Legend
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { AlertTriangle, AlertCircle, Info, ShoppingCart, TrendingUp } from 'lucide-react';
-import { inventoryForecast, inventoryAlerts, orderRecommendations, stockLevels } from '../data/mockData';
+import { AlertTriangle, AlertCircle, Info, ShoppingCart, Download } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { exportToCSV } from '../engine/processingEngine';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
 export default function InventoryForecast() {
-    const severityIcon = (sev) => {
-        if (sev === 'high') return <AlertTriangle size={14} />;
-        if (sev === 'medium') return <AlertCircle size={14} />;
+    const { forecast, alerts, stocks, orders, isDataLoaded, addActivity } = useApp();
+    const [selectedSeverity, setSelectedSeverity] = useState('all');
+
+    const filteredAlerts = selectedSeverity === 'all'
+        ? alerts
+        : alerts.filter(a => a.severity === selectedSeverity);
+
+    const criticalCount = alerts.filter(a => a.severity === 'high').length;
+
+    const handleGeneratePO = () => {
+        if (orders.length === 0) {
+            addActivity('amber', '<strong>No orders</strong> to generate — all stock levels adequate');
+            return;
+        }
+        const data = orders.map(o => ({
+            Material: o.material,
+            Quantity: o.qty,
+            'Lead Time': o.leadTime,
+            'Order By': o.orderBy,
+            Priority: o.priority,
+            'Est. Cost': o.cost,
+        }));
+        exportToCSV(data, 'dynasty_purchase_order.csv');
+        addActivity('emerald', `<strong>Purchase Order</strong> generated — ${data.length} items exported to CSV`);
+    };
+
+    const severityIcon = (s) => {
+        if (s === 'high') return <AlertTriangle size={14} />;
+        if (s === 'medium') return <AlertCircle size={14} />;
         return <Info size={14} />;
     };
 
-    const severityClass = (sev) => {
-        if (sev === 'high') return 'danger';
-        if (sev === 'medium') return 'warning';
+    const severityClass = (s) => {
+        if (s === 'high') return 'danger';
+        if (s === 'medium') return 'warning';
         return 'info';
     };
 
@@ -28,51 +56,29 @@ export default function InventoryForecast() {
                     <h1>Inventory Forecasting</h1>
                     <div className="subtitle">Predictive demand analysis and stock management</div>
                 </div>
-                <span className="badge warning">{inventoryAlerts.filter(a => a.severity === 'high').length} Critical Alerts</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    {isDataLoaded && <span className="badge success">Live Data</span>}
+                    {criticalCount > 0 && <span className="badge danger">{criticalCount} CRITICAL ALERTS</span>}
+                </div>
             </div>
 
             <div className="page-content">
-                {/* Demand Curve */}
-                <div className="glass-card animate-fade-in-up" style={{ marginBottom: 24 }}>
+                {/* Forecast Chart */}
+                <div className="glass-card animate-fade-in-up">
                     <div className="card-header">
                         <div>
                             <div className="card-title">Demand Forecast vs Available Stock</div>
                             <div className="card-subtitle">12-week lookahead — shaded area indicates predicted demand</div>
                         </div>
                     </div>
-                    <div style={{ height: 320 }}>
+                    <div style={{ height: 340 }}>
                         <Line
                             data={{
-                                labels: inventoryForecast.labels,
+                                labels: forecast.labels,
                                 datasets: [
-                                    {
-                                        label: 'Predicted Demand',
-                                        data: inventoryForecast.predicted,
-                                        borderColor: '#00d4ff',
-                                        backgroundColor: 'rgba(0,212,255,0.1)',
-                                        fill: true, tension: 0.4,
-                                        pointRadius: 4, pointHoverRadius: 7,
-                                        pointBackgroundColor: '#00d4ff',
-                                    },
-                                    {
-                                        label: 'Actual Usage',
-                                        data: inventoryForecast.actual,
-                                        borderColor: '#10b981',
-                                        backgroundColor: 'transparent',
-                                        fill: false, tension: 0.4,
-                                        pointRadius: 5, pointHoverRadius: 7,
-                                        pointBackgroundColor: '#10b981',
-                                        borderDash: [6, 4],
-                                    },
-                                    {
-                                        label: 'Available Stock',
-                                        data: inventoryForecast.available,
-                                        borderColor: '#f59e0b',
-                                        backgroundColor: 'rgba(245,158,11,0.05)',
-                                        fill: true, tension: 0,
-                                        pointRadius: 2, borderWidth: 2,
-                                        borderDash: [3, 3],
-                                    },
+                                    { label: 'Predicted Demand', data: forecast.predicted, borderColor: '#2E86FF', backgroundColor: 'rgba(46,134,255,0.08)', fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6 },
+                                    { label: 'Actual Usage', data: forecast.actual, borderColor: '#00B894', fill: false, tension: 0.4, pointRadius: 4, pointHoverRadius: 6, borderDash: [5, 5] },
+                                    { label: 'Available Stock', data: forecast.available, borderColor: '#F39C12', fill: false, tension: 0, pointRadius: 2, borderWidth: 1.5, borderDash: [2, 4] },
                                 ],
                             }}
                             options={{
@@ -90,40 +96,47 @@ export default function InventoryForecast() {
                     </div>
                 </div>
 
-                <div className="grid-2">
-                    {/* Shortage Alerts */}
+                <div className="grid-2-1" style={{ marginTop: 24 }}>
+                    {/* Alerts */}
                     <div className="glass-card animate-fade-in-up stagger-2">
                         <div className="card-header">
                             <div>
                                 <div className="card-title">Shortage & Surplus Alerts</div>
-                                <div className="card-subtitle">{inventoryAlerts.length} active alerts</div>
+                                <div className="card-subtitle">{alerts.length} active alerts</div>
+                            </div>
+                            <div className="tab-bar" style={{ maxWidth: 280 }}>
+                                {['all', 'high', 'medium', 'low'].map(s => (
+                                    <button key={s} className={`tab-item ${selectedSeverity === s ? 'active' : ''}`}
+                                        onClick={() => setSelectedSeverity(s)}>
+                                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {inventoryAlerts.map((alert) => (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {filteredAlerts.length === 0 && (
+                                <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>No alerts for this filter</div>
+                            )}
+                            {filteredAlerts.map((alert) => (
                                 <div key={alert.id} style={{
-                                    padding: '12px 14px', borderRadius: 10,
-                                    background: alert.severity === 'high' ? 'rgba(244,63,94,0.06)' :
-                                        alert.severity === 'medium' ? 'rgba(245,158,11,0.06)' :
-                                            'rgba(0,212,255,0.04)',
-                                    border: `1px solid ${alert.severity === 'high' ? 'rgba(244,63,94,0.15)' :
-                                        alert.severity === 'medium' ? 'rgba(245,158,11,0.15)' :
-                                            'rgba(0,212,255,0.1)'}`,
+                                    padding: '14px 16px', borderRadius: 10,
+                                    background: alert.severity === 'high' ? 'rgba(231,76,60,0.04)' : '#F8FAFC',
+                                    border: `1px solid ${alert.severity === 'high' ? '#E74C3C33' : 'var(--border-subtle)'}`,
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                                         <span className={`badge ${severityClass(alert.severity)}`}>
-                                            {severityIcon(alert.severity)} {alert.severity}
+                                            {severityIcon(alert.severity)} {alert.severity.toUpperCase()}
                                         </span>
                                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{alert.week}</span>
                                     </div>
-                                    <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 2 }}>{alert.material}</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{alert.message}</div>
+                                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{alert.material}</div>
+                                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 2 }}>{alert.message}</div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Stock Level Gauges */}
+                    {/* Stock Levels */}
                     <div className="glass-card animate-fade-in-up stagger-3">
                         <div className="card-header">
                             <div>
@@ -131,15 +144,14 @@ export default function InventoryForecast() {
                                 <div className="card-subtitle">Real-time inventory status</div>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                            {stockLevels.map((item) => (
-                                <div key={item.name}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 4 }}>
-                                        <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.name}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            {stocks.map((item, i) => (
+                                <div key={i}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: '0.85rem' }}>
+                                        <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{item.name}</span>
                                         <span style={{
                                             fontWeight: 600,
-                                            color: item.percent >= 90 ? 'var(--accent-emerald)' :
-                                                item.percent >= 75 ? 'var(--accent-amber)' : 'var(--accent-rose)',
+                                            color: item.percent >= 90 ? 'var(--accent-emerald)' : item.percent >= 70 ? 'var(--accent-amber)' : 'var(--accent-rose)',
                                         }}>
                                             {item.current}/{item.required} {item.unit} ({item.percent}%)
                                         </span>
@@ -147,9 +159,8 @@ export default function InventoryForecast() {
                                     <div style={{ height: 6, borderRadius: 3, background: '#E5E8ED' }}>
                                         <div style={{
                                             width: `${item.percent}%`, height: '100%', borderRadius: 3,
-                                            background: item.percent >= 90 ? 'var(--accent-emerald)' :
-                                                item.percent >= 75 ? 'var(--accent-amber)' : 'var(--accent-rose)',
-                                            transition: 'width 1s ease',
+                                            background: item.percent >= 90 ? 'var(--accent-emerald)' : item.percent >= 70 ? 'var(--accent-amber)' : 'var(--accent-rose)',
+                                            transition: 'width 0.5s ease',
                                         }} />
                                     </div>
                                 </div>
@@ -165,36 +176,42 @@ export default function InventoryForecast() {
                             <div className="card-title">Order Recommendations</div>
                             <div className="card-subtitle">AI-suggested procurement actions</div>
                         </div>
-                        <button className="btn btn-primary btn-sm"><ShoppingCart size={14} /> Generate PO</button>
+                        <button className="btn btn-primary btn-sm" onClick={handleGeneratePO}>
+                            <ShoppingCart size={14} /> Generate PO
+                        </button>
                     </div>
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>Material</th>
-                                <th>Qty</th>
-                                <th>Lead Time</th>
-                                <th>Order By</th>
-                                <th>Est. Cost</th>
-                                <th>Priority</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {orderRecommendations.map((rec, i) => (
-                                <tr key={i}>
-                                    <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{rec.material}</td>
-                                    <td style={{ fontWeight: 600 }}>{rec.qty}</td>
-                                    <td>{rec.leadTime}</td>
-                                    <td>{rec.orderBy}</td>
-                                    <td style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>{rec.cost}</td>
-                                    <td>
-                                        <span className={`badge ${rec.priority === 'Urgent' ? 'danger' : 'info'}`}>
-                                            {rec.priority}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    {orders.length === 0 ? (
+                        <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>
+                            All stock levels adequate — no orders needed
+                        </div>
+                    ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>MATERIAL</th><th>QTY</th><th>LEAD TIME</th>
+                                        <th>ORDER BY</th><th>EST. COST</th><th>PRIORITY</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {orders.map((order, i) => (
+                                        <tr key={i}>
+                                            <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{order.material}</td>
+                                            <td style={{ fontWeight: 600 }}>{order.qty}</td>
+                                            <td>{order.leadTime}</td>
+                                            <td>{order.orderBy}</td>
+                                            <td style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>{order.cost}</td>
+                                            <td>
+                                                <span className={`badge ${order.priority === 'Urgent' ? 'danger' : 'info'}`}>
+                                                    {order.priority.toUpperCase()}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             </div>
         </>

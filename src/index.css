@@ -1537,3 +1537,24 @@ select option {
     display: none;
   }
 }
+
+/* --- Spin Animation (for optimize button) --- */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* --- Danger Badge --- */
+.badge.danger {
+  background: rgba(231, 76, 60, 0.12);
+  color: #E74C3C;
+}

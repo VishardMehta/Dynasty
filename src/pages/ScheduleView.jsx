@@ -1,248 +1,231 @@
 import { useState } from 'react';
-import { Calendar, Package, Play, Pause, SkipForward } from 'lucide-react';
-import { scheduleTasks } from '../data/mockData';
+import { Calendar, Package, Play, Pause, SkipForward, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 const TOTAL_DAYS = 18;
 const DAY_WIDTH = 52;
 
 export default function ScheduleView() {
-    const [whatIf, setWhatIf] = useState({ taskId: '', delayDays: 0 });
-    const [applied, setApplied] = useState(false);
+    const { schedule, kits, isDataLoaded, addActivity } = useApp();
+    const [whatIf, setWhatIf] = useState(0);
+    const [simulating, setSimulating] = useState(false);
+    const [currentDay, setCurrentDay] = useState(0);
 
-    const getModifiedTasks = () => {
-        if (!applied || !whatIf.taskId) return scheduleTasks;
-        return scheduleTasks.map(t => {
-            if (t.id === whatIf.taskId) {
-                return { ...t, start: t.start + Number(whatIf.delayDays) };
+    const tasks = schedule.map(t => ({
+        ...t,
+        start: Math.max(1, (t.start || 1) + whatIf),
+        duration: t.duration || 3,
+    }));
+
+    const handleSimulate = () => {
+        if (simulating) {
+            setSimulating(false);
+            return;
+        }
+        setSimulating(true);
+        setCurrentDay(0);
+        let day = 0;
+        const interval = setInterval(() => {
+            day += 0.5;
+            setCurrentDay(Math.round(day * 2) / 2);
+            if (day >= TOTAL_DAYS) {
+                clearInterval(interval);
+                setSimulating(false);
+                addActivity('cyan', `<strong>Schedule simulation</strong> completed — ${tasks.length} tasks evaluated`);
             }
-            return t;
-        });
+        }, 200);
     };
 
-    const tasks = getModifiedTasks();
+    const handleSkip = () => {
+        setCurrentDay(TOTAL_DAYS);
+        setSimulating(false);
+        addActivity('cyan', '<strong>Schedule simulation</strong> skipped to end');
+    };
+
+    // Kit status info
+    const kitStatusMap = {};
+    kits.forEach(k => { kitStatusMap[k.id] = k.status; });
 
     return (
         <>
             <div className="page-header">
                 <div>
-                    <h1>Schedule Integration</h1>
-                    <div className="subtitle">Gantt view with formwork kit assignments and what-if analysis</div>
+                    <h1>Schedule View</h1>
+                    <div className="subtitle">Gantt chart with kit assignments and what-if analysis</div>
                 </div>
-                <div style={{ display: 'flex', gap: 12 }}>
-                    <span className="badge info"><Calendar size={12} /> Weeks 1–{Math.ceil(TOTAL_DAYS / 5)}</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    {isDataLoaded && <span className="badge success">Live Data</span>}
+                    <span className="badge info">{tasks.length} tasks</span>
                 </div>
             </div>
 
             <div className="page-content">
-                {/* Gantt Chart */}
-                <div className="glass-card animate-fade-in-up" style={{ marginBottom: 24, overflowX: 'auto' }}>
+                {/* Controls */}
+                <div className="glass-card animate-fade-in-up" style={{ marginBottom: 24 }}>
                     <div className="card-header">
-                        <div>
-                            <div className="card-title">Construction Schedule — Gantt View</div>
-                            <div className="card-subtitle">Tasks with linked formwork kits</div>
-                        </div>
-                    </div>
-
-                    <div style={{ minWidth: TOTAL_DAYS * DAY_WIDTH + 220 }}>
-                        {/* Day headers */}
-                        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 8, marginBottom: 4 }}>
-                            <div style={{ width: 200, flexShrink: 0, fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Task</div>
-                            <div style={{ display: 'flex', flex: 1 }}>
-                                {Array.from({ length: TOTAL_DAYS }, (_, i) => (
-                                    <div key={i} style={{
-                                        width: DAY_WIDTH, textAlign: 'center', fontSize: '0.7rem',
-                                        color: 'var(--text-muted)', fontWeight: 500,
-                                        borderLeft: i % 5 === 0 ? '1px solid var(--border-subtle)' : 'none',
-                                    }}>
-                                        D{i + 1}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Task rows */}
-                        {tasks.map((task, idx) => (
-                            <div key={task.id} className="animate-fade-in-up"
-                                style={{
-                                    display: 'flex', alignItems: 'center',
-                                    padding: '6px 0', borderBottom: '1px solid var(--border-subtle)',
-                                    animationDelay: `${idx * 0.05}s`,
-                                }}>
-                                <div style={{
-                                    width: 200, flexShrink: 0, fontSize: '0.82rem',
-                                    color: 'var(--text-primary)', fontWeight: 500,
-                                    display: 'flex', flexDirection: 'column', paddingRight: 8,
-                                }}>
-                                    <span>{task.name}</span>
-                                    {task.kit && (
-                                        <span style={{ fontSize: '0.7rem', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: 3, marginTop: 2 }}>
-                                            <Package size={10} /> {task.kit}
-                                        </span>
-                                    )}
-                                </div>
-                                <div style={{ display: 'flex', flex: 1, position: 'relative', height: 32 }}>
-                                    {/* Grid lines */}
-                                    {Array.from({ length: TOTAL_DAYS }, (_, i) => (
-                                        <div key={i} style={{
-                                            position: 'absolute', left: i * DAY_WIDTH, top: 0, bottom: 0,
-                                            width: 1,
-                                            background: i % 5 === 0 ? 'var(--border-subtle)' : 'transparent',
-                                        }} />
-                                    ))}
-                                    {/* Bar */}
-                                    <div
-                                        className="gantt-bar"
-                                        style={{
-                                            position: 'absolute',
-                                            left: (task.start - 1) * DAY_WIDTH + 2,
-                                            width: task.duration * DAY_WIDTH - 4,
-                                            background: task.progress === 100
-                                                ? `${task.color}cc`
-                                                : `linear-gradient(90deg, ${task.color}cc ${task.progress}%, ${task.color}33 ${task.progress}%)`,
-                                            border: `1px solid ${task.color}`,
-                                        }}
-                                    >
-                                        {task.duration >= 3 && (
-                                            <span style={{ fontSize: '0.68rem', fontWeight: 600 }}>
-                                                {task.progress > 0 ? `${task.progress}%` : ''}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="grid-2">
-                    {/* Kit Timeline */}
-                    <div className="glass-card animate-fade-in-up stagger-2">
-                        <div className="card-header">
-                            <div>
-                                <div className="card-title">Kit Delivery Timeline</div>
-                                <div className="card-subtitle">When each kit is needed, delivered, and returned</div>
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {[
-                                { kit: 'KIT-003', task: 'Columns', deliver: 'Day 1', use: 'Day 1–3', returnDate: 'Day 4', status: 'Returned' },
-                                { kit: 'KIT-004', task: 'Beams', deliver: 'Day 2', use: 'Day 3–5', returnDate: 'Day 6', status: 'Returned' },
-                                { kit: 'KIT-001', task: 'Slab A', deliver: 'Day 4', use: 'Day 5–8', returnDate: 'Day 9', status: 'In Use' },
-                                { kit: 'KIT-002', task: 'Walls', deliver: 'Day 5', use: 'Day 6–8', returnDate: 'Day 9', status: 'In Use' },
-                                { kit: 'KIT-005', task: 'Slab B', deliver: 'Day 7', use: 'Day 8–11', returnDate: 'Day 12', status: 'Pending' },
-                            ].map((item) => (
-                                <div key={item.kit} style={{
-                                    display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr 80px',
-                                    gap: 12, alignItems: 'center', padding: '10px 12px',
-                                    borderRadius: 8, background: '#F8FAFC',
-                                    border: '1px solid var(--border-subtle)', fontSize: '0.82rem',
-                                }}>
-                                    <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>{item.kit}</span>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Deliver: {item.deliver}</span>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Use: {item.use}</span>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Return: {item.returnDate}</span>
-                                    <span className={`badge ${item.status === 'Returned' ? 'success' : item.status === 'In Use' ? 'info' : 'warning'}`}>
-                                        {item.status}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* What-If Panel */}
-                    <div className="glass-card animate-fade-in-up stagger-3">
-                        <div className="card-header">
-                            <div>
-                                <div className="card-title">What-If Scenario</div>
-                                <div className="card-subtitle">Simulate schedule changes and see kit impact</div>
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                            <div>
-                                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Select Task to Delay</label>
-                                <select
-                                    value={whatIf.taskId}
-                                    onChange={(e) => { setWhatIf(prev => ({ ...prev, taskId: e.target.value })); setApplied(false); }}
-                                    style={{
-                                        width: '100%', padding: '10px 12px', borderRadius: 8,
-                                        background: 'var(--bg-input)', border: '1px solid var(--border-glass)',
-                                        color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', fontSize: '0.85rem',
-                                    }}
-                                >
-                                    <option value="">— Choose task —</option>
-                                    {scheduleTasks.map(t => (
-                                        <option key={t.id} value={t.id}>{t.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
-                                    Delay (days): <strong style={{ color: 'var(--accent-cyan)' }}>{whatIf.delayDays}</strong>
-                                </label>
-                                <input type="range" min="0" max="5" value={whatIf.delayDays}
-                                    onChange={(e) => { setWhatIf(prev => ({ ...prev, delayDays: Number(e.target.value) })); setApplied(false); }}
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
-                            <button className="btn btn-primary" onClick={() => setApplied(true)}
-                                disabled={!whatIf.taskId}
-                            >
-                                <Play size={14} /> Apply Scenario
+                        <div className="card-title">Schedule Controls</div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn btn-primary btn-sm" onClick={handleSimulate}>
+                                {simulating ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Simulate</>}
                             </button>
-                            {applied && whatIf.taskId && (
-                                <div style={{
-                                    padding: 14, borderRadius: 10,
-                                    background: 'rgba(0,212,255,0.06)',
-                                    border: '1px solid rgba(0,212,255,0.15)',
-                                    fontSize: '0.82rem', color: 'var(--text-secondary)',
-                                    lineHeight: 1.6,
-                                }}>
-                                    <strong style={{ color: 'var(--text-primary)' }}>Impact Analysis:</strong><br />
-                                    • Task <strong style={{ color: 'var(--accent-cyan)' }}>{scheduleTasks.find(t => t.id === whatIf.taskId)?.name}</strong> shifted by <strong>{whatIf.delayDays} day(s)</strong><br />
-                                    • Kit delivery rescheduled accordingly<br />
-                                    • {whatIf.delayDays >= 3 ? (
-                                        <span style={{ color: 'var(--accent-rose)' }}>⚠ Critical path affected — overall project may be delayed by {whatIf.delayDays - 1} day(s)</span>
-                                    ) : (
-                                        <span style={{ color: 'var(--accent-emerald)' }}>✓ Within float — no impact on critical path</span>
-                                    )}
-                                </div>
+                            <button className="btn btn-secondary btn-sm" onClick={handleSkip}>
+                                <SkipForward size={14} /> Skip
+                            </button>
+                        </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                        <div className="range-control">
+                            <label>
+                                <span>What-If Delay (days)</span>
+                                <span style={{ color: whatIf > 0 ? 'var(--accent-rose)' : whatIf < 0 ? 'var(--accent-emerald)' : 'var(--text-muted)', fontWeight: 600 }}>
+                                    {whatIf > 0 ? `+${whatIf}d delay` : whatIf < 0 ? `${whatIf}d earlier` : 'No change'}
+                                </span>
+                            </label>
+                            <input type="range" min="-3" max="5" value={whatIf}
+                                onChange={(e) => setWhatIf(Number(e.target.value))} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '0.85rem' }}>
+                            <div style={{ color: 'var(--text-muted)' }}>
+                                Simulation Day: <strong style={{ color: 'var(--accent-cyan)' }}>{currentDay}</strong> / {TOTAL_DAYS}
+                            </div>
+                            {whatIf > 0 && (
+                                <span className="badge warning" style={{ fontSize: '0.75rem' }}>
+                                    ⚠️ {whatIf}-day delay impacts {tasks.filter(t => t.start + t.duration > TOTAL_DAYS).length} tasks
+                                </span>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Material Flow (Simplified Sankey-style) */}
-                <div className="glass-card animate-fade-in-up stagger-4" style={{ marginTop: 24 }}>
+                {/* Gantt Chart */}
+                <div className="glass-card animate-fade-in-up stagger-2">
                     <div className="card-header">
                         <div>
-                            <div className="card-title">Material Flow Summary</div>
-                            <div className="card-subtitle">Formwork component movement across construction phases</div>
+                            <div className="card-title">Gantt Chart</div>
+                            <div className="card-subtitle">Task timeline with kit assignments</div>
                         </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, textAlign: 'center' }}>
-                        {['Yard Storage', 'Transport', 'On-Site Staging', 'Active Use', 'Stripping & Return'].map((stage, i) => (
-                            <div key={stage}>
-                                <div style={{
-                                    padding: '16px 8px', borderRadius: 10,
-                                    background: `rgba(0,212,255,${0.04 + i * 0.03})`,
-                                    border: '1px solid var(--border-subtle)',
-                                    marginBottom: 6,
-                                }}>
-                                    <div style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--accent-cyan)' }}>
-                                        {[360, 48, 72, 164, 48][i]}
+                    <div style={{ overflowX: 'auto' }}>
+                        <div style={{ minWidth: TOTAL_DAYS * DAY_WIDTH + 200 }}>
+                            {/* Day Headers */}
+                            <div style={{ display: 'flex', marginLeft: 200, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 8, marginBottom: 8 }}>
+                                {Array.from({ length: TOTAL_DAYS }, (_, i) => (
+                                    <div key={i} style={{
+                                        width: DAY_WIDTH, textAlign: 'center', fontSize: '0.75rem', fontWeight: 500,
+                                        color: i + 1 <= currentDay ? 'var(--accent-cyan)' : 'var(--text-muted)',
+                                    }}>
+                                        D{i + 1}
                                     </div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, marginTop: 2 }}>
-                                        units
-                                    </div>
-                                </div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                                    {stage}
-                                </div>
-                                {i < 4 && (
-                                    <div style={{ color: 'var(--text-muted)', margin: '4px 0', fontSize: '0.9rem' }}>→</div>
-                                )}
+                                ))}
                             </div>
-                        ))}
+
+                            {/* Current Day Indicator */}
+                            {currentDay > 0 && (
+                                <div style={{
+                                    position: 'relative', height: 0, zIndex: 10,
+                                }}>
+                                    <div style={{
+                                        position: 'absolute',
+                                        left: 200 + (currentDay - 1) * DAY_WIDTH + DAY_WIDTH / 2,
+                                        top: 0, width: 2, height: tasks.length * 48,
+                                        background: 'var(--accent-cyan)', opacity: 0.4,
+                                    }} />
+                                </div>
+                            )}
+
+                            {/* Task Bars */}
+                            {tasks.map((task, idx) => {
+                                const left = 200 + (task.start - 1) * DAY_WIDTH;
+                                const width = task.duration * DAY_WIDTH;
+                                const progress = task.progress || 0;
+                                const isOverflow = task.start + task.duration > TOTAL_DAYS + 1;
+                                const kitStatus = kitStatusMap[task.kit];
+
+                                return (
+                                    <div key={task.id} style={{
+                                        display: 'flex', alignItems: 'center', height: 44,
+                                        borderBottom: '1px solid #F0F2F5',
+                                    }}>
+                                        {/* Task Label */}
+                                        <div style={{ width: 200, paddingRight: 12, fontSize: '0.82rem' }}>
+                                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {task.name}
+                                            </div>
+                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <Package size={10} /> {task.kit}
+                                                {kitStatus && (
+                                                    <span style={{ marginLeft: 4 }}>
+                                                        {kitStatus === 'Deployed' ? <CheckCircle size={10} color="var(--accent-emerald)" /> :
+                                                            kitStatus === 'Ready' ? <Clock size={10} color="var(--accent-cyan)" /> :
+                                                                <AlertCircle size={10} color="var(--accent-amber)" />}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Gantt Bar */}
+                                        <div style={{ position: 'relative', flex: 1, height: 24 }}>
+                                            <div style={{
+                                                position: 'absolute', left, width: Math.min(width, (TOTAL_DAYS - task.start + 1) * DAY_WIDTH),
+                                                height: 24, borderRadius: 6,
+                                                background: isOverflow
+                                                    ? `repeating-linear-gradient(45deg, ${task.color}99, ${task.color}99 4px, ${task.color}55 4px, ${task.color}55 8px)`
+                                                    : task.color + '44',
+                                                border: `1.5px solid ${task.color}`,
+                                                overflow: 'hidden',
+                                            }}>
+                                                {/* Progress fill */}
+                                                <div style={{
+                                                    width: `${progress}%`, height: '100%',
+                                                    background: task.color + 'AA',
+                                                    transition: 'width 0.3s ease',
+                                                }} />
+                                                {/* Label */}
+                                                <div style={{
+                                                    position: 'absolute', top: 0, left: 6, right: 6,
+                                                    lineHeight: '24px', fontSize: '0.7rem', fontWeight: 600,
+                                                    color: progress > 40 ? '#fff' : 'var(--text-primary)',
+                                                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                }}>
+                                                    {progress > 0 ? `${progress}%` : task.name}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Kit Summary Cards */}
+                <div className="glass-card animate-fade-in-up stagger-3" style={{ marginTop: 24 }}>
+                    <div className="card-header">
+                        <div className="card-title">Kit → Task Mapping</div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
+                        {tasks.map((task) => {
+                            const kit = kits.find(k => k.id === task.kit);
+                            return (
+                                <div key={task.id} style={{
+                                    padding: '12px 16px', borderRadius: 10,
+                                    background: '#F8FAFC', border: '1px solid var(--border-subtle)',
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 600, color: task.color, fontSize: '0.85rem' }}>{task.kit}</span>
+                                        {kit && (
+                                            <span className={`badge ${kit.status === 'Deployed' ? 'success' : kit.status === 'Ready' ? 'info' : 'warning'}`} style={{ fontSize: '0.7rem' }}>
+                                                {kit.status}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: 500, marginTop: 4 }}>{task.name}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                                        Day {task.start}–{task.start + task.duration - 1} • {kit?.totalWeight || '—'} • {kit?.utilization || 0}% util
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
